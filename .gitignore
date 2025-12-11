@@ -1,0 +1,72 @@
+#######################################
+# Project files
+#######################################
+
+# Helper / generated docs you don't want to ship if not needed
+HELP.md
+
+#######################################
+# Maven
+#######################################
+
+# Build output
+target/
+
+# Maven wrapper JAR (regenerated)
+.mvn/wrapper/maven-wrapper.jar
+
+# Keep wrapper properties (do NOT ignore this file)
+# (no pattern needed – it's not under target/)
+
+#######################################
+# Logs
+#######################################
+
+logs/
+*.log
+spring.log
+
+#######################################
+# STS / Eclipse
+#######################################
+
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+#######################################
+# IntelliJ IDEA
+#######################################
+
+.idea/
+*.iws
+*.iml
+*.ipr
+
+#######################################
+# NetBeans
+#######################################
+
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+#######################################
+# VS Code
+#######################################
+
+.vscode/
+
+#######################################
+# OS-specific junk
+#######################################
+
+.DS_Store
+Thumbs.db

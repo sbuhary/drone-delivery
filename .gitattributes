@@ -1,0 +1,34 @@
+# Normalize line endings across platforms
+* text=auto
+
+# Windows scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Unix scripts
+*.sh text eol=lf
+
+# Common text files
+*.java text
+*.kt text
+*.xml text
+*.yml text
+*.yaml text
+*.properties text
+*.md text
+*.txt text
+*.json text
+pom.xml text
+
+# Images and binaries (no line-ending normalization)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.exe binary
+*.dll binary
