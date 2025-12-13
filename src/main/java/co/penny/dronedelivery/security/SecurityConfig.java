@@ -19,13 +19,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
+                // simplest for assessment; JWT is stateless
                 .csrf(csrf -> csrf.disable())
+
+                // required if using H2 console
+                .headers(h -> h.frameOptions(f -> f.sameOrigin()))
+
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 .authorizeHttpRequests(auth -> auth
-                        // match paths WITHOUT /api/v1 because it's a context-path
-                        .requestMatchers("/health", "/auth/token").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers("/api/v1/health").permitAll()
+                        .requestMatchers("/api/v1/auth/token").permitAll()
                         .anyRequest().authenticated()
                 )
+
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

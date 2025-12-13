@@ -30,7 +30,7 @@ class HealthControllerTest {
 
     @Test
     void health_shouldReturnUpStatus() throws Exception {
-        mockMvc.perform(get("/health"))
+        mockMvc.perform(get("/api/v1/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("UP")))
                 .andExpect(jsonPath("$.service", is("drone-delivery-backend")))

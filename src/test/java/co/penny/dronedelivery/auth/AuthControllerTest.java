@@ -45,7 +45,7 @@ class AuthControllerTest {
 
         var request = new TokenRequest("test", UserRole.DRONE);
 
-        mockMvc.perform(post("/auth/token")
+        mockMvc.perform(post("/api/v1/auth/token")
                         .contentType("application/json")
                         .content(mapper.writeValueAsString(request)))
                 .andExpect(status().isOk())

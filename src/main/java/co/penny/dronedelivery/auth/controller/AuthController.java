@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Issues JWT tokens.
  */
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private final JwtService jwtService;
@@ -24,11 +24,8 @@ public class AuthController {
     }
 
     @PostMapping("/token")
-    public ResponseEntity<TokenResponse> token(
-            @Valid @RequestBody TokenRequest request
-    ) {
-        String token =
-                jwtService.generateToken(request.getName(), request.getRole());
+    public ResponseEntity<TokenResponse> token(@Valid @RequestBody TokenRequest request) {
+        String token = jwtService.generateToken(request.getName(), request.getRole());
         return ResponseEntity.ok(new TokenResponse(token));
     }
 }
