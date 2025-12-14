@@ -1,117 +1,129 @@
 package co.penny.dronedelivery.orders.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Persistent Order entity stored in DB (via JPA).
- */
 @Entity
 @Table(name = "orders")
 public class Order {
 
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(name = "customer_id", nullable = false, updatable = false)
-    private UUID customerId;
-
-    @Column(name = "origin_lat", nullable = false)
+    @Column(nullable = false)
     private double originLat;
 
-    @Column(name = "origin_lng", nullable = false)
+    @Column(nullable = false)
     private double originLng;
 
-    @Column(name = "destination_lat", nullable = false)
-    private double destinationLat;
+    @Column(nullable = false)
+    private double destLat;
 
-    @Column(name = "destination_lng", nullable = false)
-    private double destinationLng;
+    @Column(nullable = false)
+    private double destLng;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(nullable = false)
     private OrderStatus status;
 
-    @Column(name = "assigned_drone_id")
-    private UUID assignedDroneId;
+    @Column(nullable = false)
+    private String createdBy;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    private String assignedDroneId;
+
+    @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    /**
-     * Optimistic locking for safe concurrent updates (recommended).
-     */
-    @Version
-    @Column(name = "version", nullable = false)
-    private long version;
-
-    protected Order() {
-        // for JPA
-    }
-
-    public Order(UUID id, UUID customerId,
-                 double originLat, double originLng,
-                 double destinationLat, double destinationLng,
-                 OrderStatus status, UUID assignedDroneId, Instant createdAt) {
-        this.id = id;
-        this.customerId = customerId;
-        this.originLat = originLat;
-        this.originLng = originLng;
-        this.destinationLat = destinationLat;
-        this.destinationLng = destinationLng;
-        this.status = status;
-        this.assignedDroneId = assignedDroneId;
-        this.createdAt = createdAt;
+    @PrePersist
+    public void prePersist() {
+        if (id == null) {
+            id = UUID.randomUUID();
+        }
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+        if (status == null) {
+            status = OrderStatus.CREATED;
+        }
     }
 
     public UUID getId() {
         return id;
     }
 
-    public UUID getCustomerId() {
-        return customerId;
+    public void setId(UUID id) {
+        this.id = id;
     }
 
     public double getOriginLat() {
         return originLat;
     }
 
+    public void setOriginLat(double originLat) {
+        this.originLat = originLat;
+    }
+
     public double getOriginLng() {
         return originLng;
     }
 
-    public double getDestinationLat() {
-        return destinationLat;
+    public void setOriginLng(double originLng) {
+        this.originLng = originLng;
     }
 
-    public double getDestinationLng() {
-        return destinationLng;
+    public double getDestLat() {
+        return destLat;
+    }
+
+    public void setDestLat(double destLat) {
+        this.destLat = destLat;
+    }
+
+    public double getDestLng() {
+        return destLng;
+    }
+
+    public void setDestLng(double destLng) {
+        this.destLng = destLng;
     }
 
     public OrderStatus getStatus() {
         return status;
     }
 
-    public UUID getAssignedDroneId() {
+    public void setStatus(OrderStatus status) {
+        this.status = status;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getAssignedDroneId() {
         return assignedDroneId;
+    }
+
+    public void setAssignedDroneId(String assignedDroneId) {
+        this.assignedDroneId = assignedDroneId;
     }
 
     public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public long getVersion() {
-        return version;
-    }
-
-    public void setStatus(OrderStatus status) {
-        this.status = status;
-    }
-
-    public void setAssignedDroneId(UUID assignedDroneId) {
-        this.assignedDroneId = assignedDroneId;
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 }

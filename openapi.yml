@@ -1,0 +1,440 @@
+openapi: 3.0.3
+info:
+  title: Drone Delivery API
+  version: 1.0.0
+  description: Minimal modular-monolith backend for drone deliveries.
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local dev
+paths:
+  /auth/token:
+    post:
+      summary: Issue JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthTokenRequest'
+      responses:
+        '200':
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+  /endusers/me/orders:
+    post:
+      summary: Create order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+        '400':
+          $ref: '#/components/responses/Error'
+  /endusers/me/orders/{orderId}/withdraw:
+    post:
+      summary: Withdraw order
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Withdrawn
+        '400':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+  /endusers/me/orders/{orderId}:
+    get:
+      summary: Get order view
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order view
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderView'
+        '404':
+          $ref: '#/components/responses/Error'
+  /drones/me/status:
+    get:
+      summary: Get drone status
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DroneStatusResponse'
+  /drones/me/location:
+    post:
+      summary: Update drone location
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DroneLocationRequest'
+      responses:
+        '204':
+          description: Updated
+  /drones/me/jobs/reserve:
+    post:
+      summary: Reserve an open job
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Reserved job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '400':
+          $ref: '#/components/responses/Error'
+  /drones/me/orders/grab:
+    post:
+      summary: Grab reserved job
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Job in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '400':
+          $ref: '#/components/responses/Error'
+  /drones/me/orders/{orderId}/complete:
+    post:
+      summary: Complete order
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteOrderRequest'
+      responses:
+        '204':
+          description: Completed
+        '400':
+          $ref: '#/components/responses/Error'
+  /drones/me/broken:
+    post:
+      summary: Mark drone broken
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Marked broken
+  /admin/orders:
+    get:
+      summary: List orders
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderSummary'
+  /admin/orders/{orderId}:
+    patch:
+      summary: Patch order
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminOrderPatchRequest'
+      responses:
+        '200':
+          description: Patched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderSummary'
+        '404':
+          $ref: '#/components/responses/Error'
+  /admin/drones:
+    get:
+      summary: List drones
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Drones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DroneSummary'
+  /admin/drones/{droneId}/broken:
+    post:
+      summary: Mark drone broken (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: droneId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DroneSummary'
+  /admin/drones/{droneId}/fixed:
+    post:
+      summary: Mark drone fixed (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: droneId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DroneSummary'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Error:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    AuthTokenRequest:
+      type: object
+      required: [name, role]
+      properties:
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+    CreateOrderRequest:
+      type: object
+      required: [origin, destination]
+      properties:
+        origin:
+          $ref: '#/components/schemas/LocationDto'
+        destination:
+          $ref: '#/components/schemas/LocationDto'
+    CreateOrderResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+          format: uuid
+    CompleteOrderRequest:
+      type: object
+      required: [result]
+      properties:
+        result:
+          $ref: '#/components/schemas/CompletionResult'
+    AdminOrderPatchRequest:
+      type: object
+      properties:
+        originLat:
+          type: number
+        originLng:
+          type: number
+        destLat:
+          type: number
+        destLng:
+          type: number
+    OrderView:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        assignedDroneId:
+          type: string
+          nullable: true
+        currentLocation:
+          $ref: '#/components/schemas/LocationDto'
+        eta:
+          nullable: true
+    OrderSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        originLat:
+          type: number
+        originLng:
+          type: number
+        destLat:
+          type: number
+        destLng:
+          type: number
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        createdBy:
+          type: string
+        assignedDroneId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    DroneStatusResponse:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/DroneStatus'
+        currentOrder:
+          $ref: '#/components/schemas/DroneCurrentOrder'
+    DroneCurrentOrder:
+      type: object
+      nullable: true
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+    DroneLocationRequest:
+      $ref: '#/components/schemas/LocationDto'
+    DroneSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/DroneStatus'
+        location:
+          $ref: '#/components/schemas/LocationDto'
+        lastSeenAt:
+          type: string
+          format: date-time
+    JobResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/JobType'
+        pickupLat:
+          type: number
+        pickupLng:
+          type: number
+        status:
+          $ref: '#/components/schemas/JobStatus'
+    LocationDto:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat:
+          type: number
+        lng:
+          type: number
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        path:
+          type: string
+    Role:
+      type: string
+      enum: [ADMIN, ENDUSER, DRONE]
+    CompletionResult:
+      type: string
+      enum: [DELIVERED, FAILED]
+    DroneStatus:
+      type: string
+      enum: [AVAILABLE, BROKEN]
+    OrderStatus:
+      type: string
+      enum: [CREATED, IN_TRANSIT, AWAITING_HANDOFF, DELIVERED, FAILED]
+    JobStatus:
+      type: string
+      enum: [OPEN, RESERVED, IN_PROGRESS]
+    JobType:
+      type: string
+      enum: [PICKUP_ORIGIN, HANDOFF_PICKUP]

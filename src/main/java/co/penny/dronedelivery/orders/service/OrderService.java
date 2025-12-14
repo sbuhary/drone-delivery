@@ -1,130 +1,136 @@
 package co.penny.dronedelivery.orders.service;
 
+import co.penny.dronedelivery.common.api.LocationDto;
 import co.penny.dronedelivery.common.exception.BadRequestException;
-import co.penny.dronedelivery.common.exception.ForbiddenException;
 import co.penny.dronedelivery.common.exception.NotFoundException;
+import co.penny.dronedelivery.drones.repository.DroneRepository;
+import co.penny.dronedelivery.jobs.model.JobType;
+import co.penny.dronedelivery.jobs.service.JobService;
+import co.penny.dronedelivery.orders.dto.AdminOrderPatchRequest;
 import co.penny.dronedelivery.orders.dto.CreateOrderRequest;
-import co.penny.dronedelivery.orders.dto.LocationDto;
-import co.penny.dronedelivery.orders.dto.OrderResponse;
+import co.penny.dronedelivery.orders.dto.OrderSummary;
+import co.penny.dronedelivery.orders.dto.OrderView;
 import co.penny.dronedelivery.orders.model.Order;
 import co.penny.dronedelivery.orders.model.OrderStatus;
 import co.penny.dronedelivery.orders.repository.OrderRepository;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Core business logic for Orders (JPA-backed).
- */
 @Service
 public class OrderService {
 
-    private final OrderRepository repository;
+    private final OrderRepository orderRepository;
+    private final JobService jobService;
+    private final DroneRepository droneRepository;
 
-    public OrderService(OrderRepository repository) {
-        this.repository = repository;
+    public OrderService(OrderRepository orderRepository, JobService jobService, DroneRepository droneRepository) {
+        this.orderRepository = orderRepository;
+        this.jobService = jobService;
+        this.droneRepository = droneRepository;
     }
 
+    /**
+     * Creates a new order for the given user and immediately spawns an OPEN pickup job at the origin.
+     */
     @Transactional
-    public OrderResponse create(CreateOrderRequest request, Authentication auth) {
-        requireRole(auth, "ROLE_ADMIN", "ROLE_ENDUSER");
+    public UUID createOrder(String username, CreateOrderRequest request) {
+        Order order = new Order();
+        order.setCreatedBy(username);
+        order.setOriginLat(request.origin().lat());
+        order.setOriginLng(request.origin().lng());
+        order.setDestLat(request.destination().lat());
+        order.setDestLng(request.destination().lng());
+        order.setStatus(OrderStatus.CREATED);
+        orderRepository.save(order);
 
-        UUID customerId = customerIdFromCaller(auth.getName());
+        jobService.createJob(order.getId(), JobType.PICKUP_ORIGIN, order.getOriginLat(), order.getOriginLng());
 
-        Order order = new Order(
-                UUID.randomUUID(),
-                customerId,
-                request.getOrigin().getLat(),
-                request.getOrigin().getLng(),
-                request.getDestination().getLat(),
-                request.getDestination().getLng(),
-                OrderStatus.CREATED,
-                null,
-                Instant.now()
-        );
-
-        Order saved = repository.save(order);
-        return toResponse(saved);
+        return order.getId();
     }
 
-    @Transactional(readOnly = true)
-    public List<OrderResponse> list(Authentication auth) {
-        requireRole(auth, "ROLE_ADMIN", "ROLE_ENDUSER");
-
-        boolean isAdmin = hasAuthority(auth, "ROLE_ADMIN");
-        List<Order> orders = isAdmin
-                ? repository.findAll()
-                : repository.findByCustomerId(customerIdFromCaller(auth.getName()));
-
-        return orders.stream().map(this::toResponse).toList();
-    }
-
-    @Transactional(readOnly = true)
-    public OrderResponse get(UUID orderId, Authentication auth) {
-        requireRole(auth, "ROLE_ADMIN", "ROLE_ENDUSER");
-
-        Order order = repository.findById(orderId)
-                .orElseThrow(() -> new NotFoundException("Order not found: " + orderId));
-
-        if (hasAuthority(auth, "ROLE_ADMIN")) return toResponse(order);
-
-        UUID customerId = customerIdFromCaller(auth.getName());
-        if (!order.getCustomerId().equals(customerId)) {
-            throw new ForbiddenException("You are not allowed to access this order");
-        }
-
-        return toResponse(order);
-    }
-
+    /**
+     * Withdraws a CREATED order and its OPEN job; otherwise fails with bad request.
+     */
     @Transactional
-    public void withdraw(UUID orderId, Authentication auth) {
-        requireRole(auth, "ROLE_ENDUSER");
-
-        Order order = repository.findById(orderId)
-                .orElseThrow(() -> new NotFoundException("Order not found: " + orderId));
-
-        UUID customerId = customerIdFromCaller(auth.getName());
-        if (!order.getCustomerId().equals(customerId)) {
-            throw new ForbiddenException("You are not allowed to withdraw this order");
-        }
-
+    public void withdrawOrder(String username, UUID orderId) {
+        Order order = orderRepository.findByIdAndCreatedBy(orderId, username)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
         if (order.getStatus() != OrderStatus.CREATED) {
-            throw new BadRequestException("Order cannot be withdrawn in current state");
+            throw new BadRequestException("Order cannot be withdrawn");
+        }
+        jobService.deleteOpenJob(order.getId());
+        orderRepository.delete(order);
+    }
+
+    /**
+     * Returns an end-user view of the order; includes drone location if assigned.
+     */
+    public OrderView getOrderForUser(String username, UUID orderId) {
+        Order order = orderRepository.findByIdAndCreatedBy(orderId, username)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
+        LocationDto locationDto = null;
+        if (order.getAssignedDroneId() != null) {
+            locationDto = droneRepository.findById(order.getAssignedDroneId())
+                    .map(d -> new LocationDto(d.getLat(), d.getLng()))
+                    .orElse(null);
+        }
+        return new OrderView(order.getStatus(), order.getAssignedDroneId(), locationDto, null);
+    }
+
+    /**
+     * Lists all orders for admin visibility.
+     */
+    public List<OrderSummary> listOrders() {
+        return orderRepository.findAll().stream()
+                .map(o -> new OrderSummary(
+                        o.getId(),
+                        o.getOriginLat(),
+                        o.getOriginLng(),
+                        o.getDestLat(),
+                        o.getDestLng(),
+                        o.getStatus(),
+                        o.getCreatedBy(),
+                        o.getAssignedDroneId(),
+                        o.getCreatedAt()
+                ))
+                .toList();
+    }
+
+    /**
+     * Applies partial updates to order coordinates.
+     */
+    @Transactional
+    public OrderSummary patchOrder(UUID orderId, AdminOrderPatchRequest patchRequest) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found"));
+
+        if (patchRequest.originLat() != null) {
+            order.setOriginLat(patchRequest.originLat());
+        }
+        if (patchRequest.originLng() != null) {
+            order.setOriginLng(patchRequest.originLng());
+        }
+        if (patchRequest.destLat() != null) {
+            order.setDestLat(patchRequest.destLat());
+        }
+        if (patchRequest.destLng() != null) {
+            order.setDestLng(patchRequest.destLng());
         }
 
-        order.setStatus(OrderStatus.WITHDRAWN);
-        repository.save(order);
-    }
-
-    private OrderResponse toResponse(Order order) {
-        OrderResponse r = new OrderResponse();
-        r.setId(order.getId());
-        r.setCustomerId(order.getCustomerId());
-        r.setOrigin(new LocationDto(order.getOriginLat(), order.getOriginLng()));
-        r.setDestination(new LocationDto(order.getDestinationLat(), order.getDestinationLng()));
-        r.setStatus(order.getStatus());
-        r.setAssignedDroneId(order.getAssignedDroneId());
-        r.setCreatedAt(order.getCreatedAt());
-        return r;
-    }
-
-    private void requireRole(Authentication auth, String... allowedAuthorities) {
-        for (String a : allowedAuthorities) {
-            if (hasAuthority(auth, a)) return;
-        }
-        throw new ForbiddenException("Insufficient privileges");
-    }
-
-    private boolean hasAuthority(Authentication auth, String authority) {
-        return auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(authority));
-    }
-
-    private UUID customerIdFromCaller(String username) {
-        return UUID.nameUUIDFromBytes(("user:" + username).getBytes(StandardCharsets.UTF_8));
+        Order saved = orderRepository.save(order);
+        return new OrderSummary(
+                saved.getId(),
+                saved.getOriginLat(),
+                saved.getOriginLng(),
+                saved.getDestLat(),
+                saved.getDestLng(),
+                saved.getStatus(),
+                saved.getCreatedBy(),
+                saved.getAssignedDroneId(),
+                saved.getCreatedAt()
+        );
     }
 }

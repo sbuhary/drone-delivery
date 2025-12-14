@@ -1,0 +1,297 @@
+{
+  "info": {
+    "_postman_id": "d9c0a3a0-0000-4c0f-8b00-000000000001",
+    "name": "Drone Delivery API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Minimal collection covering admin, end user, and drone flows."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "adminToken", "value": "" },
+    { "key": "enduserToken", "value": "" },
+    { "key": "droneToken", "value": "" },
+    { "key": "orderId", "value": "" },
+    { "key": "jobId", "value": "" },
+    { "key": "droneId", "value": "drone-1" }
+  ],
+  "item": [
+    {
+      "name": "Auth - Admin Token",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"admin1\",\n  \"role\": \"ADMIN\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/auth/token"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "if (json.token) {",
+              "  pm.collectionVariables.set('adminToken', json.token);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth - EndUser Token",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"alice\",\n  \"role\": \"ENDUSER\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/auth/token"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "if (json.token) {",
+              "  pm.collectionVariables.set('enduserToken', json.token);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth - Drone Token",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{droneId}}\",\n  \"role\": \"DRONE\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/auth/token"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "if (json.token) {",
+                "  pm.collectionVariables.set('droneToken', json.token);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "EndUser - Create Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{enduserToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": { \"lat\": 1, \"lng\": 2 },\n  \"destination\": { \"lat\": 3, \"lng\": 4 }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/endusers/me/orders"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "if (json.orderId) {",
+              "  pm.collectionVariables.set('orderId', json.orderId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "EndUser - Withdraw Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{enduserToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/endusers/me/orders/{{orderId}}/withdraw"
+      }
+    },
+    {
+      "name": "EndUser - Get Order",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{enduserToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/endusers/me/orders/{{orderId}}"
+      }
+    },
+    {
+      "name": "Drone - Get Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{droneToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/drones/me/status"
+      }
+    },
+    {
+      "name": "Drone - Update Location",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{droneToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"lat\": 5, \"lng\": 6 }",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/drones/me/location"
+      }
+    },
+    {
+      "name": "Drone - Reserve Job",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{droneToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/drones/me/jobs/reserve"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "if (json.id) { pm.collectionVariables.set('jobId', json.id); }",
+              "if (json.orderId) { pm.collectionVariables.set('orderId', json.orderId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Drone - Grab Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{droneToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/drones/me/orders/grab"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "if (json.orderId) { pm.collectionVariables.set('orderId', json.orderId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Drone - Complete Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{droneToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"result\": \"DELIVERED\" }",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/drones/me/orders/{{orderId}}/complete"
+      }
+    },
+    {
+      "name": "Drone - Mark Broken",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{droneToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/drones/me/broken"
+      }
+    },
+    {
+      "name": "Admin - List Orders",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/admin/orders"
+      }
+    },
+    {
+      "name": "Admin - Patch Order",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"destLat\": 9, \"destLng\": 9 }",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/api/v1/admin/orders/{{orderId}}"
+      }
+    },
+    {
+      "name": "Admin - List Drones",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/admin/drones"
+      }
+    },
+    {
+      "name": "Admin - Mark Drone Broken",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/admin/drones/{{droneId}}/broken"
+      }
+    },
+    {
+      "name": "Admin - Mark Drone Fixed",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/admin/drones/{{droneId}}/fixed"
+      }
+    }
+  ]
+}

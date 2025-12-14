@@ -1,9 +1,9 @@
 package co.penny.dronedelivery.common.exception;
 
 /**
- * Base exception for API errors.
+ * Base unchecked exception for API-layer errors that should map to HTTP responses.
  */
-public class ApiException extends RuntimeException {
+public abstract class ApiException extends RuntimeException {
     public ApiException(String message) {
         super(message);
     }
