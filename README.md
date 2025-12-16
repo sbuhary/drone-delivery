@@ -15,6 +15,7 @@ mvn spring-boot:run
 Important props (see `src/main/resources/application.properties`):
 - `app.jwt.secret` (required)
 - `app.jwt.expiration-seconds` (default 3600)
+- H2 console (dev only): `/h2-console` with `spring.h2.console.settings.web-allow-others=true` enabled for container access.
 
 H2 console: `/h2-console` (dev only). Swagger UI: `/swagger-ui.html`.
 
@@ -29,6 +30,7 @@ Build and run:
 docker build -t drone-delivery .
 docker run -p 8080:8080 -e APP_JWT_SECRET=change-me drone-delivery
 ```
+H2 console from host: `http://localhost:8080/h2-console` (dev only). Use JDBC URL `jdbc:h2:mem:dronedelivery;DB_CLOSE_DELAY=-1;MODE=PostgreSQL`, user `sa`, blank password (change the default value shown in the form—do not use `/root/test`).
 
 ## Docker Compose
 ```bash

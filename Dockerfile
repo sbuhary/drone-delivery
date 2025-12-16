@@ -4,11 +4,11 @@ WORKDIR /workspace
 
 # Cache dependencies first.
 COPY pom.xml .
-RUN mvn -B -q -DskipTests -Djava.version=21 dependency:go-offline
+RUN mvn -B -q -DskipTests -Djava.version=25 dependency:go-offline
 
 # Copy sources and build the application.
 COPY src ./src
-RUN mvn -B -q -DskipTests -Djava.version=21 clean package
+RUN mvn -B -q -DskipTests -Djava.version=25 clean package
 
 # Runtime image.
 FROM eclipse-temurin:25-jre
